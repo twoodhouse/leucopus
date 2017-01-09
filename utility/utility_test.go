@@ -14,9 +14,9 @@ func TestUtility(t *testing.T) {
 }
 
 func TestMetaPath(t *testing.T) {
-	metaPath := NewMetaPath([]string{"A", "B"}, 2)
+	metaPath := NewMetaPath([]string{"A", "B", "C"}, 0)
 	metaPath.Print()
-	for i := 0; i < 2000; i++ {
+	for i := 0; i < 5; i++ {
 		metaPath.Improve2()
 		metaPath.Print()
 	}

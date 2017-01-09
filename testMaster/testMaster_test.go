@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/twoodhouse/leucopus/info"
+	"github.com/twoodhouse/leucopus/utility"
 )
 
 func TestStringCombination(t *testing.T) {
-	result := getFullDynamicStringCombinations([]string{"a", "b", "c", "d"})
+	result := utility.GetFullDynamicStringCombinations([]string{"a", "b", "c", "d"})
 	for _, set := range result {
 		for _, e := range set {
 			print(e)
@@ -20,9 +21,9 @@ func TestTestMasterUse(t *testing.T) {
 	println("testing testMaster creation and use 1")
 	tm := New()
 
-	info1 := info.New("a")
-	info2 := info.New("b")
-	info3 := info.New("c")
+	info1 := info.New("A")
+	info2 := info.New("B")
+	info3 := info.New("C")
 
 	tm.Mem.SetRiver(info1, []int{1, 0, 0, 0, 1, 0, 0, 1})
 	tm.Mem.SetRiver(info2, []int{1, 1, 0, 0, 1, 1, 0, 1, 0})
@@ -41,18 +42,18 @@ func TestPather(t *testing.T) {
 	println("testing Path Module with case 1")
 	tm := New()
 
-	info1 := info.New("a")
-	info2 := info.New("b")
-	info3 := info.New("c")
+	info1 := info.New("A")
+	info2 := info.New("B")
+	info3 := info.New("C")
 
 	tm.Mem.SetRiver(info1, []int{1, 0, 0, 0, 1, 0, 0, 1})
 	tm.Mem.SetRiver(info2, []int{1, 1, 0, 0, 1, 1, 0, 1, 0})
 	tm.Mem.SetRiver(info3, []int{1, 0, 1, 1, 1, 0, 1, 1, 1})
 
 	pathModule := NewGeneralPathModule(tm.Mem)
-	pth := pathModule.GetPath(info1, []*info.Info{info2, info3})
+	pth := pathModule.GetPath(info1, []*info.Info{info1, info2, info3})
 	pth.Print()
-	pth = pathModule.GetPath(info1, []*info.Info{info2, info3})
+	pth = pathModule.GetPath(info1, []*info.Info{info1, info2, info3})
 	pth.Print()
 }
 

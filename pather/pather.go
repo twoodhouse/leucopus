@@ -19,11 +19,12 @@ type Path struct {
 	ExitLink        *truthTable.Link
 	Age             int
 	Uid             string
+	EntryInfos      []*info.Info
 }
 
 func (p *Path) Print() {
 	print("Entry Info Uids ")
-	for nfo, _ := range p.LinkAssociation {
+	for _, nfo := range p.EntryInfos {
 		print(nfo.Uid)
 		print(", ")
 	}
@@ -108,6 +109,7 @@ func NewPath(entryInfos []*info.Info) *Path {
 		exitLink,
 		0,
 		uid,
+		entryInfos,
 	}
 	return &entity
 }

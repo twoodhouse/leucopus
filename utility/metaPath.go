@@ -22,11 +22,16 @@ func NewMetaPath(sources []string, numINodes int) *MetaPath {
 	}
 	inputSet := GetFullDynamicStringCombinations(sources)
 	inputSetWithoutI1 := make([][]string, 0)
-	for _, input := range inputSet {
-		if len(input) != 1 || input[0] != "I1" {
-			inputSetWithoutI1 = append(inputSetWithoutI1, input)
+	if numINodes == 0 {
+		inputSetWithoutI1 = append(inputSetWithoutI1, sources)
+	} else {
+		for _, input := range inputSet {
+			if len(input) != 1 || input[0] != "I1" {
+				inputSetWithoutI1 = append(inputSetWithoutI1, input)
+			}
 		}
 	}
+
 	metaRow = NewMetaRow(nil, inputSetWithoutI1, nil, nil, originalSources, numINodes)
 	//now load the first metaPath to test:
 	mrTest := metaRow
@@ -82,9 +87,9 @@ func (mp *MetaPath) GetDeepestRow() *MetaRow {
 // 	}
 // }
 
-func (mp *MetaPath) Improve2() {
+func (mp *MetaPath) Improve2() bool {
 	if isFullyImproved(mp.GetDeepestRow()) {
-		return
+		return false
 	}
 	maxRowSize := mp.GetMaxRowSize()
 	if mp.IncreaseMaxRowSize {
@@ -132,12 +137,14 @@ func (mp *MetaPath) Improve2() {
 					activeRow = activeRow.Parent
 				} else {
 					mp.IncreaseMaxRowSize = true
+					println("increasing row size")
 					maxRowSize = maxRowSize + 1
 					activeRow = deepestRow
 				}
 			}
 		}
 	}
+	return true
 }
 
 func isFullyImproved(deepestRow *MetaRow) bool {
@@ -300,9 +307,9 @@ func DelveFirstOption_Conditional(mr *MetaRow, max int, mp *MetaPath) bool {
 	currentRowNum := 0
 	indexes := []int{}
 	for mp.GetMaxRowSize() > max {
+		// print(mr.Name)
 		// print("-")
 		// mp.Print()
-		// println(mr.Name)
 		if len(indexes) == currentRowNum {
 			indexes = append(indexes, 0)
 		}
@@ -332,14 +339,17 @@ func DelveFirstOption_Conditional(mr *MetaRow, max int, mp *MetaPath) bool {
 			}
 		} else {
 			//not at bottom
-			cont := false
+			cont := true
 			if len(currentRow.Choices[indexes[currentRowNum]+1]) <= max {
 				currentAltRow := currentRow.Delve(currentRow.Choices[indexes[currentRowNum]+1], false)
+				// println("going deeper")
+				// print(mr.Name)
+				// print("-")
+				// mp.Print()
 				firstRowSuccess := DelveFirstOption_Conditional(currentAltRow, max, mp)
 				if firstRowSuccess {
 					return true
 				} else {
-					cont = true
 				}
 			}
 			if cont == true {
@@ -365,6 +375,29 @@ func DelveFirstOption_Conditional(mr *MetaRow, max int, mp *MetaPath) bool {
 		}
 	}
 	return true
+}
+
+func (mp *MetaPath) GetChosen() [][]string {
+	mrTest := mp.TopMetaRow
+	for mrTest.Child != nil {
+		mrTest = mrTest.Child
+	}
+	canGoDeeper := true
+	choices := make([][]string, 0)
+	if mrTest.FinalChoice == nil {
+		println("Final choice is not set. This GetChosen() may have been run too early.")
+	} else {
+		choices = append(choices, mrTest.FinalChoice)
+	}
+	for canGoDeeper {
+		if mrTest.Parent == nil {
+			canGoDeeper = false
+		} else {
+			choices = append([][]string{mrTest.LeadChoice}, choices...)
+			mrTest = mrTest.Parent
+		}
+	}
+	return choices
 }
 
 func (mp *MetaPath) Print() {

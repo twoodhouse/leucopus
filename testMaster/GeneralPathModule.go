@@ -3,12 +3,14 @@ package testMaster
 import (
 	"math"
 	"sort"
+	"strconv"
 
 	"github.com/cznic/mathutil"
 	"github.com/twoodhouse/leucopus/info"
 	"github.com/twoodhouse/leucopus/memory"
 	"github.com/twoodhouse/leucopus/pather"
 	"github.com/twoodhouse/leucopus/truthTable"
+	"github.com/twoodhouse/leucopus/utility"
 )
 
 type GeneralPathModule struct {
@@ -25,43 +27,7 @@ func NewGeneralPathModule(mem *memory.Memory) *GeneralPathModule {
 }
 
 func (fim *GeneralPathModule) GetPath(nfo *info.Info, supportingInfos []*info.Info) *pather.Path {
-	//TODO: current comments below
-	//current issue: How can I effectively iterate over the full functionality
-	//perhaps there is an easy iteration method (my original one - or similar), which can do it without too much loss
-
-	//****** - increment the lowest modRow (and waterfall the process upward if it is the last available)
-	// I1: A, B, A-B
-	// I2: A, B, I1, A-B, A-I1, B-I1, A-B-I1 (EXCEPT the options containing something the option before chose and not an additional I node)
-	// R: I2<unlinked I and input nodes>, I2<unlinked I and input nodes>-(full permutation of elements not necessary in R)
-	// In order to do this algorithm, the available I2 and R options will need to be determined
-	//
-	/*
-		Example 1:
-		I1: <A, B, A-B> = A
-		R: <1-B, 1-B*(A)> = 1-B
-
-		Example 2:
-		I1: <A, B, A-B> = A
-		I2: <B, 1, A-1, B-1, A-B-1> = B
-		R: <2-1, 2-1(A, B, A-B)>
-
-		Example 3:
-		I1: <A, B, A-B> = A
-		I2: <B, 1, A-1, B-1, A-B-1> = A-1
-		R: <2-B, 2-B(A, 1, A-1)> = 2-B-A <- is A allowed here? ***YES***
-
-		Trevor's rules of pathing
-		1. A complete mental model for an output may be composed of any number of I nodes and a single R node
-		2. I nodes are ordered
-		3. Any number of inputs may be assigned to an I node, or an R node, from available sources
-		4. For I nodes, available sources include the looped output of previously assigned I nodes, or any info point.
-		5. Info points are designated by their name ("a", "B", etc) while I nodes are designated by their number.
-		6. Available sources are controlled for I nodes according to the following rules
-			a. An I node may not contain any portion of input to a previous I node ("Z") unless it also contains an I input which is not referenced by "Z"
-			b. The R node must contain as inputs any I nodes or Info points which are not referenced by an I node, and optionally any I nodes or Info points
-	*/
-
-	//first get last path
+	//get last path
 	var lastPath *pather.Path
 	if _, ok := fim.LastPathCollection[nfo]; ok {
 		if _, ok := fim.LastPathCollection[nfo][getUidFromInfos(supportingInfos)]; ok {
@@ -74,83 +40,98 @@ func (fim *GeneralPathModule) GetPath(nfo *info.Info, supportingInfos []*info.In
 		lastPath = nil
 	}
 
-	//now get dynamic string combination
-	sInfoNames := []string{}
-	for _, supportingInfo := range supportingInfos {
-		sInfoNames = append(sInfoNames, supportingInfo.Uid)
-	}
-	dynamicStringCombinations := utility.GetFullDynamicStringCombinations(sInfoNames)
-	_ = dynamicStringCombinations
+	//determine list of supportingInfo names
+	//TODO
+	supportingInfoNames := []string{"A", "B", "C"}
+	_ = supportingInfoNames
 
-	//now get number of I nodes
-	supportingUid := getUidFromInfos(supportingInfos)
-	var numINodes int
-	if lastPath != nil {
-		numINodes = len(lastPath.ExitILinks)
-	} else {
-		numINodes = 0
-	}
-	_ = numINodes
-
-	//now get max node size
-	var maxNodeSize int
-	if lastPath != nil {
-		maxNodeSize = getLargestInputNum(lastPath)
-	} else {
-		maxNodeSize = 0
-	}
-	_ = maxNodeSize
-
-	//edge case for first path
+	var metaPath *utility.MetaPath
 	if lastPath == nil {
-		fim.LastPathCollection[nfo] = make(map[string]*pather.Path)
-		t := []int{}
-		for i := 0; i < 2; i++ {
-			t = append(t, 2)
+		metaPath = utility.NewMetaPath([]string{"A", "B", "C"}, 1) //TODO change back to 0// modify this to get the right supporting infos
+	} else {
+		improveSuccess := metaPath.Improve2()
+		if !improveSuccess {
+			//determine current depth
+			metaPath = utility.NewMetaPath([]string{"A", "B", "C"}, len(lastPath.ExitILinks)+1)
 		}
-		pth := pather.NewPath(getInfosFromUids([]string{dynamicStringCombinations[0][0]}, supportingInfos))
-		midLink := pth.AddLinkFromLinks(pth.EntryLinks, truthTable.New(t), false)
-		truthTable.AttachLinks(midLink, pth.ExitLink, 0)
-		fim.LastPathCollection[nfo][supportingUid] = pth
-		return pth
 	}
 
-	//make combination map and find current location in the combination map
-	cMap := make([][][]string, 0)
-	cMapRow0 := make([][]string, len(dynamicStringCombinations))
-	copy(cMapRow0, dynamicStringCombinations)
-	cMap = append(cMap, cMapRow0)
-	//Loop: (TODO)
-	//	determine location in previous cMapRow
-	//	make combination map for this next row
-	//end loop
+	chosen := metaPath.GetChosen()
+	for _, el := range chosen {
+		for _, e := range el {
+			print(e)
+		}
+		print(",")
+	}
+	println()
 
-	//remember to have it check for lower max node Sizes in other parts of the map (how do I do this?)
+	// now make path, from array of inputs for each iNode
+	pth := pather.NewPath(supportingInfos)
+	//make all INodes first so they can be linked from
+	ILinks := []*truthTable.Link{}
+	for i := 0; i < len(chosen)-1; i++ {
+		ILink := pth.AddLinkFromLinks(nil, truthTable.New([]int{0, 1}), true)
+		ILinks = append(ILinks, ILink)
+	}
+	//make middle nodes
+	for choiceNum, choice := range chosen {
+		//locate correct links to link from infosToLink and I values
+		linksToLink := make([]*truthTable.Link, 0)
+		for _, infoName := range choice {
+			for i, supportingInfo := range supportingInfos {
+				if infoName == supportingInfo.Uid {
+					linksToLink = append(linksToLink, pth.EntryLinks[i])
+				}
+			}
+			if infoName[0:1] == "I" {
+				val, _ := strconv.Atoi(infoName[1:])
+				linksToLink = append(linksToLink, ILinks[val-1])
+			}
+		}
+		//make links
+		midLink := pth.AddLinkFromLinks(linksToLink, truthTable.New(getTwosArrayForTableSize(len(linksToLink))), false)
+		_ = midLink
+		//make necessary modifications to associated ILink
+		if choiceNum == len(chosen)-1 {
+			truthTable.AttachLinks(midLink, pth.ExitLink, 0)
+		} else {
+			truthTable.AttachLinks(midLink, ILinks[choiceNum], 0)
+		}
+	}
 
+	return pth
 	//**NOTE: the following section is un-important. Just for testing.
 	//edge case 1: no existing path used last time
-	if _, ok := fim.LastPathCollection[nfo]; !ok {
-		fim.LastPathCollection[nfo] = make(map[string]*pather.Path)
-		t := []int{}
-		for i := 0; i < int(math.Pow(2, float64(len(supportingInfos)))); i++ {
-			t = append(t, 2)
-		}
-		pth := pather.NewPath(supportingInfos)
-		midLink := pth.AddLinkFromLinks(pth.EntryLinks, truthTable.New(t), false)
-		truthTable.AttachLinks(midLink, pth.ExitLink, 0)
-		fim.LastPathCollection[nfo][supportingUid] = pth
-		return pth
-	}
+	// if _, ok := fim.LastPathCollection[nfo]; !ok {
+	// 	fim.LastPathCollection[nfo] = make(map[string]*pather.Path)
+	// 	t := []int{}
+	// 	for i := 0; i < int(math.Pow(2, float64(len(supportingInfos)))); i++ {
+	// 		t = append(t, 2)
+	// 	}
+	// 	pth := pather.NewPath(supportingInfos)
+	// 	midLink := pth.AddLinkFromLinks(pth.EntryLinks, truthTable.New(t), false)
+	// 	truthTable.AttachLinks(midLink, pth.ExitLink, 0)
+	// 	fim.LastPathCollection[nfo][supportingUid] = pth
+	// 	return pth
+	// }
+	//
+	// t := []int{}
+	// for i := 0; i < int(math.Pow(2, float64(len(supportingInfos)))); i++ {
+	// 	t = append(t, 2)
+	// }
+	// pth := pather.NewPath(supportingInfos)
+	// midLink := pth.AddLinkFromLinks(pth.EntryLinks, truthTable.New(t), false)
+	// ILink := pth.AddLinkFromLinks([]*truthTable.Link{midLink}, truthTable.New([]int{0, 1}), true)
+	// truthTable.AttachLinks(ILink, pth.ExitLink, 0)
+	// return pth
+}
 
+func getTwosArrayForTableSize(tableInputNum int) []int {
 	t := []int{}
-	for i := 0; i < int(math.Pow(2, float64(len(supportingInfos)))); i++ {
+	for i := 0; i < int(math.Pow(2, float64(tableInputNum))); i++ {
 		t = append(t, 2)
 	}
-	pth := pather.NewPath(supportingInfos)
-	midLink := pth.AddLinkFromLinks(pth.EntryLinks, truthTable.New(t), false)
-	ILink := pth.AddLinkFromLinks([]*truthTable.Link{midLink}, truthTable.New([]int{0, 1}), true)
-	truthTable.AttachLinks(ILink, pth.ExitLink, 0)
-	return pth
+	return t
 }
 
 func getDifficultyFactor(pth *pather.Path) int {
