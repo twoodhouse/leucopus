@@ -14,47 +14,51 @@ import (
 )
 
 type GeneralPathModule struct {
-	Mem                *memory.Memory
-	LastPathCollection map[*info.Info]map[string]*pather.Path
+	Mem                    *memory.Memory
+	LastMetaPathCollection map[*info.Info]map[string]*utility.MetaPath
 }
 
 func NewGeneralPathModule(mem *memory.Memory) *GeneralPathModule {
 	var entity = GeneralPathModule{
 		mem,
-		make(map[*info.Info]map[string]*pather.Path),
+		make(map[*info.Info]map[string]*utility.MetaPath),
 	}
 	return &entity
 }
 
 func (fim *GeneralPathModule) GetPath(nfo *info.Info, supportingInfos []*info.Info) *pather.Path {
 	//get last path
-	var lastPath *pather.Path
-	if _, ok := fim.LastPathCollection[nfo]; ok {
-		if _, ok := fim.LastPathCollection[nfo][getUidFromInfos(supportingInfos)]; ok {
-			lastPath = fim.LastPathCollection[nfo][getUidFromInfos(supportingInfos)]
+	var lastMetaPath *utility.MetaPath
+	if _, ok := fim.LastMetaPathCollection[nfo]; ok {
+		if _, ok := fim.LastMetaPathCollection[nfo][getUidFromInfos(supportingInfos)]; ok {
+			lastMetaPath = fim.LastMetaPathCollection[nfo][getUidFromInfos(supportingInfos)]
 		} else {
-			lastPath = nil
+			lastMetaPath = nil
 		}
 	} else {
-		fim.LastPathCollection[nfo] = make(map[string]*pather.Path)
-		lastPath = nil
+		fim.LastMetaPathCollection[nfo] = make(map[string]*utility.MetaPath)
+		lastMetaPath = nil
 	}
 
 	//determine list of supportingInfo names
-	//TODO
-	supportingInfoNames := []string{"A", "B", "C"}
+	supportingInfoNames := []string{}
 	_ = supportingInfoNames
+	for _, nfo := range supportingInfos {
+		supportingInfoNames = append(supportingInfoNames, nfo.Uid)
+	}
 
 	var metaPath *utility.MetaPath
-	if lastPath == nil {
-		metaPath = utility.NewMetaPath([]string{"A", "B", "C"}, 1) //TODO change back to 0// modify this to get the right supporting infos
+	if lastMetaPath == nil {
+		metaPath = utility.NewMetaPath(supportingInfoNames, 0)
 	} else {
+		metaPath = lastMetaPath
 		improveSuccess := metaPath.Improve2()
 		if !improveSuccess {
 			//determine current depth
-			metaPath = utility.NewMetaPath([]string{"A", "B", "C"}, len(lastPath.ExitILinks)+1)
+			metaPath = utility.NewMetaPath(supportingInfoNames, lastMetaPath.NumINodes+1)
 		}
 	}
+	fim.LastMetaPathCollection[nfo][getUidFromInfos(supportingInfos)] = metaPath
 
 	chosen := metaPath.GetChosen()
 	for _, el := range chosen {
@@ -98,7 +102,6 @@ func (fim *GeneralPathModule) GetPath(nfo *info.Info, supportingInfos []*info.In
 			truthTable.AttachLinks(midLink, ILinks[choiceNum], 0)
 		}
 	}
-
 	return pth
 	//**NOTE: the following section is un-important. Just for testing.
 	//edge case 1: no existing path used last time

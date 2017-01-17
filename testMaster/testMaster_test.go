@@ -44,7 +44,7 @@ func TestPather(t *testing.T) {
 
 	info1 := info.New("A")
 	info2 := info.New("B")
-	info3 := info.New("C")
+	info3 := info.New("D")
 
 	tm.Mem.SetRiver(info1, []int{1, 0, 0, 0, 1, 0, 0, 1})
 	tm.Mem.SetRiver(info2, []int{1, 1, 0, 0, 1, 1, 0, 1, 0})

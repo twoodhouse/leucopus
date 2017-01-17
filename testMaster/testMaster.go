@@ -40,11 +40,14 @@ func New() *TestMaster {
 func (t *TestMaster) GoopNextPath() {
 	focusInfo := t.FocusInfoModuleUsed.GetFocusInfo()
 	supportingInfos := t.SupportingInfosModuleUsed.GetSupportingInfos(focusInfo)
-	extraInfos := t.SupportingInfosModuleUsed.GetExtraInfos(focusInfo)
-	pth := t.PathModuleUsed.GetPath(focusInfo, supportingInfos)
-	// pth.Print()
+	extraInfos := t.SupportingInfosModuleUsed.GetExtraInfos(focusInfo) //TODO: this has something to do with cascades?
 	//TODO: extraInfos need to be added to the cascade if the goop fails
+	pth := t.PathModuleUsed.GetPath(focusInfo, supportingInfos)
+
 	_ = extraInfos
-	_ = supportingInfos
 	_ = pth
+	// pth.Print()
+	//TODO: add section which runs through the available river and cascades to verify compliance
+	//TODO: if compliant, update model which the decision making module also uses. <- IMPORTANT
+
 }

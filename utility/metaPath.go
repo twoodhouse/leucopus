@@ -5,7 +5,7 @@ import "strconv"
 type MetaPath struct {
 	AllSources         []string
 	TopMetaRow         *MetaRow
-	numINodes          int
+	NumINodes          int
 	IncreaseMaxRowSize bool
 }
 

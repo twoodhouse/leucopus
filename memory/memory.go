@@ -7,13 +7,13 @@ import (
 )
 
 type Memory struct {
-	River           map[*info.Info][]int
-	Paths           map[*info.Info]*pather.Path
-	FitGoodnesses   map[*info.Info]float32
-	ExitILinkInputs map[*info.Info]map[*truthTable.Link]int
-	Cascades        map[*info.Info][]map[*info.Info][]int
-	Depths          map[*info.Info]int
-	defaultDepth    int
+	River                 map[*info.Info][]int
+	Paths                 map[*info.Info]*pather.Path
+	InfoPathFitGoodnesses map[*info.Info]float32 //both info and path are needed in case it needs to go back to an older more successful path
+	ExitILinkInputs       map[*info.Info]map[*truthTable.Link]int
+	Cascades              map[*info.Info][]map[*info.Info][]int
+	Depths                map[*info.Info]int
+	defaultDepth          int
 }
 
 func New() *Memory {
@@ -95,7 +95,6 @@ func (m *Memory) GenerateAllCascadesTestsGivenInfoAndSupport(nfo *info.Info, sup
 
 /*
 This function needs to generate tests from a cascade, rather than river
-River test (singular) is only 1 test which is run on the latest data using ExitILink input values gained from the last river test.
 */
 func (m *Memory) GenerateCascadeTests(cascade map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, depth int) []map[*info.Info][]int {
 	tests := make([]map[*info.Info][]int, 0)
@@ -123,6 +122,14 @@ func (m *Memory) GenerateCascadeTests(cascade map[*info.Info][]int, nfo *info.In
 	}
 
 	return tests
+}
+
+func (m *Memory) MagicRiverInput(map[*info.Info]int) {
+	// First ProcessNextIteration(bla)
+	// Now ProcessRiver with river top
+	// Open cascade upon failure of process river
+	// Process all cascades and use correctness to gauge fitgoodness
+	// Update fitgoodness
 }
 
 func (m *Memory) PrintRiver() {
