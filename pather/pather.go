@@ -22,6 +22,12 @@ type Path struct {
 	EntryInfos      []*info.Info
 }
 
+// func (p *Path) Copy() *Path {
+// 	var newPath *Path
+// 	newPath = NewPath(p.EntryInfos)
+// 	return newPath
+// }
+
 func (p *Path) Print() {
 	print("Entry Info Uids ")
 	for _, nfo := range p.EntryInfos {
@@ -114,6 +120,32 @@ func NewPath(entryInfos []*info.Info) *Path {
 	return &entity
 }
 
+func (p *Path) TakeSnapshot() {
+	for _, middleLink := range p.MiddleLinks {
+		middleLink.TakeSnapshot()
+	}
+	for _, entryLink := range p.EntryLinks {
+		entryLink.TakeSnapshot()
+	}
+	for _, exitILink := range p.ExitILinks {
+		exitILink.TakeSnapshot()
+	}
+	p.ExitLink.TakeSnapshot()
+}
+
+func (p *Path) RestoreSnapshot() {
+	for _, middleLink := range p.MiddleLinks {
+		middleLink.RestoreSnapshot()
+	}
+	for _, entryLink := range p.EntryLinks {
+		entryLink.RestoreSnapshot()
+	}
+	for _, exitILink := range p.ExitILinks {
+		exitILink.RestoreSnapshot()
+	}
+	p.ExitLink.RestoreSnapshot()
+}
+
 func (p *Path) AgePath() {
 	p.Age = p.Age + 1
 }
@@ -131,20 +163,13 @@ func (p *Path) AddLinkFromLinks(sourceLinks []*truthTable.Link, table *truthTabl
 	return newLink
 }
 
-type Pather struct {
-	infos []*info.Info
-}
-
-func New(infos []*info.Info) *Pather {
-	var entity = Pather{
-		infos,
+func ProcessRiver(mostRecent map[*info.Info]int, exitILinkInputs map[*truthTable.Link]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path, setInitialExitILinks bool) bool {
+	if setInitialExitILinks {
+		for _, exitILink := range pth.ExitILinks {
+			exitILink.Inputs[0] = exitILinkInputs[exitILink]
+		}
 	}
-	return &entity
-}
-
-func (p *Pather) ProcessRiver(mostRecent map[*info.Info]int, exitILinkInputs map[*truthTable.Link]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path) bool {
 	for _, exitILink := range pth.ExitILinks {
-		exitILink.Inputs[0] = exitILinkInputs[exitILink]
 		exitILink.Process()
 		exitILink.Forward()
 	}
@@ -173,7 +198,20 @@ func (p *Pather) ProcessRiver(mostRecent map[*info.Info]int, exitILinkInputs map
 	return true
 }
 
-func (p *Pather) ProcessCascadeWithIVariation(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path) bool {
+func ProcessCascadeWithIVariation(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path) bool {
+	//print cascade for testing
+	// print("test for ")
+	// println(nfo.Uid)
+	// for k, v := range test {
+	// 	print(k.Uid)
+	// 	print(":")
+	// 	for _, e := range v {
+	// 		print(e)
+	// 		print(",")
+	// 	}
+	// 	println()
+	// }
+
 	numExitILinks := len(pth.ExitILinks)
 	for i := 0; i < int(math.Exp2(float64(numExitILinks))); i++ {
 		binaryStrRow := strings.Split(strconv.FormatInt(int64(i), 2), "")
@@ -183,7 +221,7 @@ func (p *Pather) ProcessCascadeWithIVariation(test map[*info.Info][]int, nfo *in
 		}
 		for j, e := range binaryIntRow {
 			pth.ExitILinks[j].Inputs[0] = e
-			result := p.ProcessTest(test, nfo, supportingInfos, pth)
+			result := ProcessTest(test, nfo, supportingInfos, pth)
 			if result {
 				return true
 			}
@@ -192,11 +230,11 @@ func (p *Pather) ProcessCascadeWithIVariation(test map[*info.Info][]int, nfo *in
 	return false
 }
 
-func (p *Pather) ProcessTest(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path) bool {
-	return p.ProcessTest_Deep(test, nfo, supportingInfos, pth.LinkAssociation, pth.ExitLink, pth.ExitILinks)
+func ProcessTest(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path) bool {
+	return ProcessTest_Deep(test, nfo, supportingInfos, pth.LinkAssociation, pth.ExitLink, pth.ExitILinks)
 }
 
-func (p *Pather) ProcessTest_Deep(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, sourceLinkAssociation map[*info.Info]*truthTable.Link, exitLink *truthTable.Link, exitILinks []*truthTable.Link) bool {
+func ProcessTest_Deep(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, sourceLinkAssociation map[*info.Info]*truthTable.Link, exitLink *truthTable.Link, exitILinks []*truthTable.Link) bool {
 
 	for i := 0; i < len(test[nfo]); i++ {
 		for _, exitILink := range exitILinks {

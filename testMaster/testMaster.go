@@ -11,6 +11,9 @@ type TestMaster struct {
 	FocusInfoModuleUsed       FocusInfoModule
 	SupportingInfosModuleUsed SupportingInfosModule
 	PathModuleUsed            PathModule
+	LastFocus                 *info.Info
+	LastSupportingInfos       []*info.Info
+	LastPath                  *pather.Path
 }
 
 type FocusInfoModule interface {
@@ -33,21 +36,28 @@ func New() *TestMaster {
 		NewGeneralFocusInfoModule(mem),
 		NewGeneralSupportingInfosModule(mem),
 		NewGeneralPathModule(mem),
+		nil,
+		nil,
+		nil,
 	}
 	return &entity
 }
 
-func (t *TestMaster) GoopNextPath() {
-	focusInfo := t.FocusInfoModuleUsed.GetFocusInfo()
-	supportingInfos := t.SupportingInfosModuleUsed.GetSupportingInfos(focusInfo)
-	extraInfos := t.SupportingInfosModuleUsed.GetExtraInfos(focusInfo) //TODO: this has something to do with cascades?
+func (tm *TestMaster) GetNextPath() *pather.Path {
+	focusInfo := tm.FocusInfoModuleUsed.GetFocusInfo()
+	supportingInfos := tm.SupportingInfosModuleUsed.GetSupportingInfos(focusInfo)
+	extraInfos := tm.SupportingInfosModuleUsed.GetExtraInfos(focusInfo) //TODO: this has something to do with cascades?
 	//TODO: extraInfos need to be added to the cascade if the goop fails
-	pth := t.PathModuleUsed.GetPath(focusInfo, supportingInfos)
+	pth := tm.PathModuleUsed.GetPath(focusInfo, supportingInfos)
 
 	_ = extraInfos
 	_ = pth
+	tm.LastFocus = focusInfo
+	tm.LastSupportingInfos = supportingInfos
+	tm.LastPath = pth
+	return pth
 	// pth.Print()
-	//TODO: add section which runs through the available river and cascades to verify compliance
-	//TODO: if compliant, update model which the decision making module also uses. <- IMPORTANT
+	//TODO: add section which runs through the available river and cascades to verify compliance UPDATE: not in this function anymore
+	//TODO: if compliant, update model which the decision making module also uses. <- IMPORTANT UPDATE: not in this function anymore
 
 }

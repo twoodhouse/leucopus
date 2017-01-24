@@ -14,7 +14,7 @@ type GeneralSupportingInfosModule struct {
 }
 
 func NewGeneralSupportingInfosModule(mem *memory.Memory) *GeneralSupportingInfosModule {
-	MAX_TRIES := 100
+	MAX_TRIES := 1000
 	infos := make([]*info.Info, 0)
 	for info := range mem.River {
 		infos = append(infos, info)

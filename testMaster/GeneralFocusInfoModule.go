@@ -26,8 +26,8 @@ func (fim *GeneralFocusInfoModule) GetFocusInfo() *info.Info {
 	worstGoodness := float32(1)
 	var associatedInfo *info.Info
 	for _, info := range fim.Infos {
-		if fim.Mem.FitGoodnesses[info] < worstGoodness {
-			worstGoodness = fim.Mem.FitGoodnesses[info]
+		if fim.Mem.InfoFitGoodnesses[info] < worstGoodness {
+			worstGoodness = fim.Mem.InfoFitGoodnesses[info]
 			associatedInfo = info
 		}
 	}

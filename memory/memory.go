@@ -7,29 +7,34 @@ import (
 )
 
 type Memory struct {
-	River                 map[*info.Info][]int
-	Paths                 map[*info.Info]*pather.Path
-	InfoPathFitGoodnesses map[*info.Info]float32 //both info and path are needed in case it needs to go back to an older more successful path
-	ExitILinkInputs       map[*info.Info]map[*truthTable.Link]int
-	Cascades              map[*info.Info][]map[*info.Info][]int
-	Depths                map[*info.Info]int
-	defaultDepth          int
+	River             map[*info.Info][]int
+	Paths             map[*info.Info]*pather.Path
+	SupportingInfos   map[*info.Info][]*info.Info
+	InfoFitGoodnesses map[*info.Info]float32 //TODO: Maybe add another lookup? both info and path are needed in case it needs to go back to an older more successful path
+	ExitILinkInputs   map[*info.Info]map[*truthTable.Link]int
+	Cascades          map[*info.Info][]map[*info.Info][]int //this second to last array is the list of cascades to run
+	Depths            map[*info.Info]int
+	defaultDepth      int
 }
 
 func New() *Memory {
 	var entity = Memory{
 		make(map[*info.Info][]int),
 		make(map[*info.Info]*pather.Path),
+		make(map[*info.Info][]*info.Info),
 		make(map[*info.Info]float32),
 		make(map[*info.Info]map[*truthTable.Link]int),
 		make(map[*info.Info][]map[*info.Info][]int),
 		make(map[*info.Info]int),
-		50,
+		10,
 	}
 	return &entity
 }
 
 func (m *Memory) ProcessNextIteration(values map[*info.Info]int) {
+	if len(values) != len(m.River) {
+		println("River row to add does not contain the same infos that the river contains")
+	}
 	for nfo, val := range values {
 		m.AddToRiver(nfo, val)
 	}
@@ -62,36 +67,42 @@ func (m *Memory) SetRiver(nfo *info.Info, vals []int) {
 	m.River[nfo] = vals
 }
 
-//TODO: test this function
-func (m *Memory) OpenCascade(nfo *info.Info, supportingInfos []*info.Info) {
+func (m *Memory) OpenCascade(nfo *info.Info) {
+	// supportingInfos := m.SupportingInfos[nfo]
+	// supportingInfosUid := utility.GetUidFromInfos(supportingInfos)
 	if _, ok := m.Cascades[nfo]; !ok {
 		m.Cascades[nfo] = make([]map[*info.Info][]int, 0)
 	}
-	cascade := make(map[*info.Info][]int)
-	for _, supportingInfo := range supportingInfos {
-		cascade[supportingInfo] = m.River[supportingInfo] //adds whole related river row to the cascade
+	if _, ok := m.Cascades[nfo]; !ok {
+		m.Cascades[nfo] = make([]map[*info.Info][]int, 0)
 	}
-	m.Cascades[nfo] = append(m.Cascades[nfo], cascade)
+	cascadeToAdd := make(map[*info.Info][]int)
+	for nfo, riverRow := range m.River {
+		for _, e := range riverRow {
+			cascadeToAdd[nfo] = append(cascadeToAdd[nfo], e)
+		}
+	}
+	m.Cascades[nfo] = append(m.Cascades[nfo], cascadeToAdd)
 }
 
-//TODO: test this function
-func (m *Memory) GenerateAllCascadesTestsGivenInfoAndSupport(nfo *info.Info, supportingInfos []*info.Info, depth int) [][]map[*info.Info][]int {
-	allTests := make([][]map[*info.Info][]int, 0)
-	nfoCascades := m.Cascades[nfo]
-	for _, nfoCascade := range nfoCascades {
-		hasAllSupport := true
-		for _, supportingInfo := range supportingInfos {
-			if _, ok := nfoCascade[supportingInfo]; !ok {
-				hasAllSupport = false
-			}
-		}
-		if hasAllSupport {
-			result := m.GenerateCascadeTests(nfoCascade, nfo, supportingInfos, depth)
-			allTests = append(allTests, result)
-		}
-	}
-	return allTests
-}
+// //TODO: test this function
+// func (m *Memory) GenerateAllCascadesTestsGivenInfoAndSupport(nfo *info.Info, supportingInfos []*info.Info, depth int) [][]map[*info.Info][]int {
+// 	allTests := make([][]map[*info.Info][]int, 0)
+// 	nfoCascades := m.Cascades[nfo]
+// 	for _, nfoCascade := range nfoCascades {
+// 		hasAllSupport := true
+// 		for _, supportingInfo := range supportingInfos {
+// 			if _, ok := nfoCascade[supportingInfo]; !ok {
+// 				hasAllSupport = false
+// 			}
+// 		}
+// 		if hasAllSupport {
+// 			result := m.GenerateCascadeTests(nfoCascade, nfo, supportingInfos, depth)
+// 			allTests = append(allTests, result)
+// 		}
+// 	}
+// 	return allTests
+// }
 
 /*
 This function needs to generate tests from a cascade, rather than river
@@ -124,12 +135,69 @@ func (m *Memory) GenerateCascadeTests(cascade map[*info.Info][]int, nfo *info.In
 	return tests
 }
 
-func (m *Memory) MagicRiverInput(map[*info.Info]int) {
+func (m *Memory) ProcessPathAgainstCascades(pth *pather.Path) float32 {
+	//TODO: write this function
+	return float32(0)
+}
+
+func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
 	// First ProcessNextIteration(bla)
-	// Now ProcessRiver with river top
-	// Open cascade upon failure of process river
-	// Process all cascades and use correctness to gauge fitgoodness
-	// Update fitgoodness
+	m.ProcessNextIteration(row)
+	// Now ProcessRiver (for each river info) with river top
+	for focusInfo, _ := range m.River {
+		supportingInfos := m.SupportingInfos[focusInfo]
+		pth := m.Paths[focusInfo]
+		var result bool
+		// If the first time, it needs to set the ExitILinkInputs to 1. The path switcher in test master can do consideration on what things to set when switching
+		exitILinkInputs := make(map[*truthTable.Link]int)
+		if m.Paths[focusInfo].ExitILinks[0].Output == -1 {
+			for _, lnk := range m.Paths[focusInfo].ExitILinks {
+				exitILinkInputs[lnk] = 1
+			}
+			result = pather.ProcessRiver(m.GetRiverTop(), exitILinkInputs, focusInfo, supportingInfos, pth, true)
+		} else {
+			result = pather.ProcessRiver(m.GetRiverTop(), exitILinkInputs, focusInfo, supportingInfos, pth, false)
+		}
+		print(focusInfo.Uid)
+		println(result)
+		// Open cascade upon failure of process river
+		if !result {
+			m.OpenCascade(focusInfo)
+		}
+		totalCount := 1
+		correctCount := 0
+		if result {
+			correctCount = 1
+		}
+		// Process all cascades and use correctness to gauge fitgoodness
+		cascadesToProcess := m.Cascades[focusInfo]
+		for _, cascade := range cascadesToProcess {
+			pth.TakeSnapshot()
+			cascadeSuccess := pather.ProcessCascadeWithIVariation(cascade, focusInfo, supportingInfos, pth)
+			pth.RestoreSnapshot()
+			totalCount = totalCount + 1
+			if cascadeSuccess {
+				correctCount = correctCount + 1
+			}
+			_ = cascade
+		}
+
+		// Update fitgoodness
+		var goodness float32
+		if len(cascadesToProcess) == 0 {
+			goodness = 1.0
+		} else {
+			print(correctCount)
+			print("/")
+			println(totalCount)
+			goodness = float32(correctCount) / float32(totalCount)
+		}
+		_ = goodness
+		oldFitGoodness := m.InfoFitGoodnesses[focusInfo]
+		m.InfoFitGoodnesses[focusInfo] = (7 * oldFitGoodness / 8) + (goodness / 8)
+		println(m.InfoFitGoodnesses[focusInfo])
+	}
+	println()
 }
 
 func (m *Memory) PrintRiver() {

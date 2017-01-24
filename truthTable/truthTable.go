@@ -9,13 +9,15 @@ import (
 var uidCounter = 0
 
 type Link struct {
-	Table       *TruthTable
-	SourceLinks []*Link //this is necessary for ordering correctly
-	TargetLinks []*Link
-	Inputs      []int
-	ExitILink   bool
-	Output      int
-	Uid         string
+	Table          *TruthTable
+	SourceLinks    []*Link //this is necessary for ordering correctly
+	TargetLinks    []*Link
+	Inputs         []int
+	InputsSnapshot []int
+	ExitILink      bool
+	Output         int
+	OutputSnapshot int
+	Uid            string
 }
 
 func NewLink(table *TruthTable, exitILink bool) *Link {
@@ -34,11 +36,27 @@ func NewLink(table *TruthTable, exitILink bool) *Link {
 		make([]*Link, table.Size),
 		[]*Link{},
 		inputs,
+		inputs,
 		exitILink,
+		-1,
 		-1,
 		uid,
 	}
 	return &entity
+}
+
+func (l *Link) TakeSnapshot() {
+	l.OutputSnapshot = l.Output
+	for i, value := range l.Inputs {
+		l.InputsSnapshot[i] = value
+	}
+}
+
+func (l *Link) RestoreSnapshot() {
+	l.Output = l.OutputSnapshot
+	for i, value := range l.InputsSnapshot {
+		l.Inputs[i] = value
+	}
 }
 
 func (l *Link) FeedInputByLink(lnk *Link, val int) []*Link {

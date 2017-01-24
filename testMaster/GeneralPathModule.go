@@ -61,13 +61,13 @@ func (fim *GeneralPathModule) GetPath(nfo *info.Info, supportingInfos []*info.In
 	fim.LastMetaPathCollection[nfo][getUidFromInfos(supportingInfos)] = metaPath
 
 	chosen := metaPath.GetChosen()
-	for _, el := range chosen {
-		for _, e := range el {
-			print(e)
-		}
-		print(",")
-	}
-	println()
+	// for _, el := range chosen {
+	// 	for _, e := range el {
+	// 		print(e)
+	// 	}
+	// 	print(",")
+	// }
+	// println()
 
 	// now make path, from array of inputs for each iNode
 	pth := pather.NewPath(supportingInfos)

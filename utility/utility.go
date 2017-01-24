@@ -1,5 +1,11 @@
 package utility
 
+import (
+	"sort"
+
+	"github.com/twoodhouse/leucopus/info"
+)
+
 func GetNextDynamicCombination(infoNums []int, totalNum int) []int {
 	if len(infoNums) == 0 {
 		return []int{0}
@@ -96,4 +102,17 @@ func GetFullDynamicStringCombinations(lst []string) [][]string { //modify this
 		fullCombinations = append(fullCombinations, currStringComb)
 	}
 	return fullCombinations
+}
+
+func GetUidFromInfos(infos []*info.Info) string {
+	outList := []string{}
+	for _, e := range infos {
+		outList = append(outList, e.Uid)
+	}
+	sort.Strings(outList)
+	var finSt string
+	for _, e := range outList {
+		finSt = finSt + e
+	}
+	return finSt
 }

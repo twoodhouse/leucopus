@@ -13,6 +13,11 @@ func New(uid string) *Info {
 	return &entity
 }
 
+// func (info *Info) Copy() {
+// 	var newInfo *Info
+// 	New()
+// }
+
 func (info *Info) GrabCurrentValue() int {
 	//TODO: implement this based off another class or system
 	return 0
