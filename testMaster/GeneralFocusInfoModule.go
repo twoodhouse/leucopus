@@ -6,30 +6,44 @@ import (
 )
 
 type GeneralFocusInfoModule struct {
-	Mem   *memory.Memory
-	Infos []*info.Info
+	Mem       *memory.Memory
+	Infos     []*info.Info
+	LastIndex int
 }
 
 func NewGeneralFocusInfoModule(mem *memory.Memory) *GeneralFocusInfoModule {
-	infos := make([]*info.Info, 0)
-	for info := range mem.River {
-		infos = append(infos, info)
-	}
 	var entity = GeneralFocusInfoModule{
 		mem,
-		infos,
+		[]*info.Info{},
+		0,
 	}
 	return &entity
 }
 
-func (fim *GeneralFocusInfoModule) GetFocusInfo() *info.Info {
-	worstGoodness := float32(1)
-	var associatedInfo *info.Info
-	for _, info := range fim.Infos {
-		if fim.Mem.InfoFitGoodnesses[info] < worstGoodness {
-			worstGoodness = fim.Mem.InfoFitGoodnesses[info]
-			associatedInfo = info
-		}
+func (fim *GeneralFocusInfoModule) PullRiverInfos() {
+	for nfo, _ := range fim.Mem.River {
+		fim.Infos = append(fim.Infos, nfo)
 	}
-	return associatedInfo
 }
+
+func (fim *GeneralFocusInfoModule) GetFocusInfo() *info.Info {
+	newIndex := fim.LastIndex + 1
+	if newIndex == len(fim.Infos) {
+		newIndex = 0
+	}
+	choice := fim.Infos[newIndex]
+	fim.LastIndex = newIndex
+	return choice
+}
+
+// func (fim *GeneralFocusInfoModule) GetFocusInfo() *info.Info {
+// 	worstGoodness := float32(1)
+// 	var associatedInfo *info.Info
+// 	for _, info := range fim.Infos {
+// 		if fim.Mem.InfoFitGoodnesses[info] < worstGoodness {
+// 			worstGoodness = fim.Mem.InfoFitGoodnesses[info]
+// 			associatedInfo = info
+// 		}
+// 	}
+// 	return associatedInfo
+// }

@@ -9,33 +9,40 @@ type GeneralSupportingInfosModule struct {
 	Mem                   *memory.Memory
 	Infos                 []*info.Info
 	LastSupportingInfoSet map[*info.Info][]*info.Info
-	TriesOnSet            int
-	MaxTries              int
+	TriesOnSet            map[*info.Info]int
+	MaxTries              map[*info.Info]int
 }
 
 func NewGeneralSupportingInfosModule(mem *memory.Memory) *GeneralSupportingInfosModule {
-	MAX_TRIES := 1000
 	infos := make([]*info.Info, 0)
 	for info := range mem.River {
 		infos = append(infos, info)
 	}
 	var entity = GeneralSupportingInfosModule{
 		mem,
-		infos,
+		[]*info.Info{},
 		make(map[*info.Info][]*info.Info),
-		MAX_TRIES,
-		MAX_TRIES,
+		make(map[*info.Info]int),
+		make(map[*info.Info]int),
 	}
 	return &entity
 }
 
+func (fim *GeneralSupportingInfosModule) PullRiverInfos() {
+	MAX_TRIES := 2
+	for nfo, _ := range fim.Mem.River {
+		fim.Infos = append(fim.Infos, nfo)
+		fim.MaxTries[nfo] = MAX_TRIES
+		fim.TriesOnSet[nfo] = MAX_TRIES
+	}
+}
+
 func (fim *GeneralSupportingInfosModule) GetSupportingInfos(nfo *info.Info) []*info.Info {
-	if fim.TriesOnSet < fim.MaxTries-1 {
-		// println("!")
-		fim.TriesOnSet = fim.TriesOnSet + 1
+	if fim.TriesOnSet[nfo] < fim.MaxTries[nfo]-1 {
+		fim.TriesOnSet[nfo] = fim.TriesOnSet[nfo] + 1
 		return fim.LastSupportingInfoSet[nfo]
 	}
-	fim.TriesOnSet = 0
+	fim.TriesOnSet[nfo] = 0
 	//populate infos from river
 	if len(fim.Infos) == 0 {
 		for nfo := range fim.Mem.River {

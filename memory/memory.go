@@ -40,6 +40,35 @@ func (m *Memory) ProcessNextIteration(values map[*info.Info]int) {
 	}
 }
 
+func (m *Memory) PrintPaths() {
+	println()
+	for nfo, path := range m.Paths {
+		print("Path for ")
+		println(nfo.Uid)
+		path.Print()
+	}
+}
+
+func (m *Memory) PrintGoodness() {
+	println()
+	println("PRINTING MEMORY FIT GOODNESS")
+	for nfo, goodness := range m.InfoFitGoodnesses {
+		print(nfo.Uid)
+		print(": ")
+		println(goodness)
+	}
+}
+
+func (m *Memory) PrintNumCascades() {
+	println()
+	println("PRINTING NUMBER OF CASCADES")
+	for nfo, cascades := range m.Cascades {
+		print(nfo.Uid)
+		print(": ")
+		println(len(cascades))
+	}
+}
+
 func (m *Memory) AddToRiver(nfo *info.Info, val int) {
 	// if memory does not contain this info, add a depth for it
 	if _, ok := m.Depths[nfo]; !ok {
@@ -65,6 +94,10 @@ func (m *Memory) SetRiver(nfo *info.Info, vals []int) {
 		m.Depths[nfo] = m.defaultDepth
 	}
 	m.River[nfo] = vals
+}
+
+func (m *Memory) GetNumCascades(nfo *info.Info) int {
+	return len(m.Cascades[nfo])
 }
 
 func (m *Memory) OpenCascade(nfo *info.Info) {
@@ -135,9 +168,32 @@ func (m *Memory) GenerateCascadeTests(cascade map[*info.Info][]int, nfo *info.In
 	return tests
 }
 
-func (m *Memory) ProcessPathAgainstCascades(pth *pather.Path) float32 {
-	//TODO: write this function
-	return float32(0)
+func (m *Memory) ProcessPathAgainstCascades(focusInfo *info.Info, supportingInfos []*info.Info, pth *pather.Path) float32 {
+	totalCount := 0
+	correctCount := 0
+	cascadesToProcess := m.Cascades[focusInfo]
+	for _, cascade := range cascadesToProcess {
+		pth.TakeSnapshot()
+		cascadeSuccess := pather.ProcessCascadeWithIVariation(cascade, focusInfo, supportingInfos, pth)
+		pth.RestoreSnapshot()
+		totalCount = totalCount + 1
+		if cascadeSuccess {
+			correctCount = correctCount + 1
+		}
+		_ = cascade
+	}
+
+	// Update fitgoodness
+	var unweightedGoodness float32
+	if len(cascadesToProcess) == 0 {
+		unweightedGoodness = 1.0
+	} else {
+		unweightedGoodness = float32(correctCount) / float32(totalCount)
+	}
+	// oldFitGoodness := m.InfoFitGoodnesses[focusInfo]
+	// m.InfoFitGoodnesses[focusInfo] = (7 * oldFitGoodness / 8) + (goodness / 8)
+	// println(m.InfoFitGoodnesses[focusInfo])
+	return unweightedGoodness
 }
 
 func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
@@ -145,23 +201,26 @@ func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
 	m.ProcessNextIteration(row)
 	// Now ProcessRiver (for each river info) with river top
 	for focusInfo, _ := range m.River {
+		if _, ok := m.Paths[focusInfo]; !ok {
+			continue // don't run the rest of this path related code if there is no path yet for the info
+		}
 		supportingInfos := m.SupportingInfos[focusInfo]
 		pth := m.Paths[focusInfo]
 		var result bool
 		// If the first time, it needs to set the ExitILinkInputs to 1. The path switcher in test master can do consideration on what things to set when switching
 		exitILinkInputs := make(map[*truthTable.Link]int)
-		if m.Paths[focusInfo].ExitILinks[0].Output == -1 {
-			for _, lnk := range m.Paths[focusInfo].ExitILinks {
+		if len(pth.ExitILinks) > 0 && pth.ExitILinks[0].Output == -1 {
+			for _, lnk := range pth.ExitILinks {
 				exitILinkInputs[lnk] = 1
 			}
-			result = pather.ProcessRiver(m.GetRiverTop(), exitILinkInputs, focusInfo, supportingInfos, pth, true)
+			result = pather.ProcessRiver2(m.GetRiverTop(), exitILinkInputs, focusInfo, supportingInfos, pth, true)
 		} else {
-			result = pather.ProcessRiver(m.GetRiverTop(), exitILinkInputs, focusInfo, supportingInfos, pth, false)
+			result = pather.ProcessRiver2(m.GetRiverTop(), exitILinkInputs, focusInfo, supportingInfos, pth, false)
 		}
-		print(focusInfo.Uid)
-		println(result)
 		// Open cascade upon failure of process river
 		if !result {
+			// println("failure")
+			// pth.Print()
 			m.OpenCascade(focusInfo)
 		}
 		totalCount := 1
@@ -187,17 +246,17 @@ func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
 		if len(cascadesToProcess) == 0 {
 			goodness = 1.0
 		} else {
-			print(correctCount)
-			print("/")
-			println(totalCount)
+			// print(correctCount)
+			// print("/")
+			// println(totalCount)
 			goodness = float32(correctCount) / float32(totalCount)
 		}
 		_ = goodness
-		oldFitGoodness := m.InfoFitGoodnesses[focusInfo]
-		m.InfoFitGoodnesses[focusInfo] = (7 * oldFitGoodness / 8) + (goodness / 8)
-		println(m.InfoFitGoodnesses[focusInfo])
+		// oldFitGoodness := m.InfoFitGoodnesses[focusInfo]
+		m.InfoFitGoodnesses[focusInfo] = goodness
+		// println(m.InfoFitGoodnesses[focusInfo])
 	}
-	println()
+	// println()
 }
 
 func (m *Memory) PrintRiver() {

@@ -18,10 +18,12 @@ type TestMaster struct {
 
 type FocusInfoModule interface {
 	GetFocusInfo() *info.Info
+	PullRiverInfos()
 }
 
 type SupportingInfosModule interface {
 	GetSupportingInfos(*info.Info) []*info.Info
+	PullRiverInfos()
 	GetExtraInfos(*info.Info) []*info.Info
 }
 
@@ -49,7 +51,11 @@ func (tm *TestMaster) GetNextPath() *pather.Path {
 	extraInfos := tm.SupportingInfosModuleUsed.GetExtraInfos(focusInfo) //TODO: this has something to do with cascades?
 	//TODO: extraInfos need to be added to the cascade if the goop fails
 	pth := tm.PathModuleUsed.GetPath(focusInfo, supportingInfos)
-
+	//
+	// println(focusInfo.Uid)
+	// for _, e := range supportingInfos {
+	// 	println(e.Uid)
+	// }
 	_ = extraInfos
 	_ = pth
 	tm.LastFocus = focusInfo

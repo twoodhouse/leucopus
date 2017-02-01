@@ -14,6 +14,7 @@ type Link struct {
 	TargetLinks    []*Link
 	Inputs         []int
 	InputsSnapshot []int
+	ExitLinkInputs []int
 	ExitILink      bool
 	Output         int
 	OutputSnapshot int
@@ -35,6 +36,7 @@ func NewLink(table *TruthTable, exitILink bool) *Link {
 		table,
 		make([]*Link, table.Size),
 		[]*Link{},
+		inputs,
 		inputs,
 		inputs,
 		exitILink,
@@ -83,6 +85,10 @@ func (l *Link) FeedInputByLink(lnk *Link, val int) []*Link {
 func (l *Link) Process() {
 
 	l.Output = l.Table.Process(l.Inputs)
+	// print("processing ")
+	// println(l.Uid)
+	// println(l.Output)
+	// l.Table.Print()
 	// l.Print()
 }
 
@@ -154,6 +160,10 @@ func NewEntryTable() *TruthTable {
 }
 
 func (t *TruthTable) Process(inputs []int) int {
+	/*
+		Discussion: what happens when this function is fed a 2? Currently it seems that it outputs 0.
+		If the function has 2s in its output and is fed 1s and 0s, then it will output a 2.
+	*/
 	if len(inputs) != t.Size {
 		println("Warning: truth table process has wrong number of inputs for truth table")
 	}
@@ -168,13 +178,28 @@ func (t *TruthTable) Process(inputs []int) int {
 		text := strconv.Itoa(number)
 		inputsText = append(inputsText, text)
 	}
-	//reverse order of input array in order to allow the ones digit to be last
-	// for i, j := 0, len(inputsText)-1; i < j; i, j = i+1, j-1 {
-	// 	inputsText[i], inputsText[j] = inputsText[j], inputsText[i]
-	// }
 	location, _ := strconv.ParseInt(strings.Join(inputsText, ""), 2, 64)
 	t.LastProcessResult = t.Outputs[location]
 	return t.Outputs[location]
+}
+
+func (t *TruthTable) ReplaceInputValue(inputs []int, value int) {
+	if len(inputs) != t.Size {
+		println("Warning: truth table process has wrong number of inputs for truth table")
+	}
+	for _, e := range inputs {
+		if e == -1 {
+			println("Error: You may have forgotten to set a starting value for an ExitILink")
+		}
+	}
+	var inputsText []string
+	for i := range inputs {
+		number := inputs[i]
+		text := strconv.Itoa(number)
+		inputsText = append(inputsText, text)
+	}
+	location, _ := strconv.ParseInt(strings.Join(inputsText, ""), 2, 64)
+	t.Outputs[location] = value
 }
 
 func (t *TruthTable) Fill() {

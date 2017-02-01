@@ -137,7 +137,6 @@ func (mp *MetaPath) Improve2() bool {
 					activeRow = activeRow.Parent
 				} else {
 					mp.IncreaseMaxRowSize = true
-					println("increasing row size")
 					maxRowSize = maxRowSize + 1
 					activeRow = deepestRow
 				}

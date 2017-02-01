@@ -13,7 +13,7 @@ var uidCounter = 0
 
 type Path struct {
 	LinkAssociation map[*info.Info]*truthTable.Link
-	MiddleLinks     []*truthTable.Link
+	MiddleLinks     []*truthTable.Link //The last middle link is R!!!
 	EntryLinks      []*truthTable.Link
 	ExitILinks      []*truthTable.Link
 	ExitLink        *truthTable.Link
@@ -193,11 +193,54 @@ func ProcessRiver(mostRecent map[*info.Info]int, exitILinkInputs map[*truthTable
 		}
 	}
 	if pth.ExitLink.Output != mostRecent[nfo] {
+		println(pth.ExitLink.Output)
+		for k, v := range mostRecent {
+			print(k.Uid)
+			print(":")
+			println(v)
+		}
+		pth.MiddleLinks[0].Print()
 		return false
 	}
 	return true
 }
 
+func ProcessRiver2(mostRecent map[*info.Info]int, exitILinkInputs map[*truthTable.Link]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path, setInitialExitILinks bool) bool {
+	if setInitialExitILinks {
+		for _, exitILink := range pth.ExitILinks {
+			exitILink.Inputs[0] = exitILinkInputs[exitILink]
+		}
+	}
+	//configure ExitILinks so that the initial targets of them have the appropriate values
+	for _, exitILink := range pth.ExitILinks {
+		exitILink.Process()
+		exitILink.Forward()
+	}
+
+	//for each supportingInfo of the focused Path, Forward to recursively dive through ALL the rest of the path truth tables (R likely last)
+	for _, supportingInfo := range supportingInfos {
+		if _, ok := pth.LinkAssociation[supportingInfo]; ok {
+			history := mostRecent[supportingInfo]
+			pth.LinkAssociation[supportingInfo].Output = history
+			pth.LinkAssociation[supportingInfo].Forward()
+		}
+	}
+	pth.AssumeBestOfR(mostRecent[nfo])
+
+	if pth.ExitLink.Output != mostRecent[nfo] {
+		return false
+	}
+	return true
+}
+
+//TODO: possibly add to this function to allow for best-casing conflicts
+func (pth *Path) AssumeBestOfR(result int) {
+	if pth.MiddleLinks[len(pth.MiddleLinks)-1].Output == 2 {
+		pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.ReplaceInputValue(pth.MiddleLinks[len(pth.MiddleLinks)-1].Inputs, result)
+	}
+}
+
+//TODO: modify this to test with iteratively generated I tables and assuming best of R
 func ProcessCascadeWithIVariation(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path) bool {
 	//print cascade for testing
 	// print("test for ")
@@ -211,23 +254,31 @@ func ProcessCascadeWithIVariation(test map[*info.Info][]int, nfo *info.Info, sup
 	// 	}
 	// 	println()
 	// }
-
 	numExitILinks := len(pth.ExitILinks)
-	for i := 0; i < int(math.Exp2(float64(numExitILinks))); i++ {
-		binaryStrRow := strings.Split(strconv.FormatInt(int64(i), 2), "")
-		binaryIntRow := make([]int, numExitILinks)
-		for i, e := range binaryStrRow {
-			binaryIntRow[i], _ = strconv.Atoi(e)
+	if numExitILinks == 0 {
+		result := ProcessTest(test, nfo, supportingInfos, pth)
+		if result {
+			return true
+		} else {
+			return false
 		}
-		for j, e := range binaryIntRow {
-			pth.ExitILinks[j].Inputs[0] = e
-			result := ProcessTest(test, nfo, supportingInfos, pth)
-			if result {
-				return true
+	} else {
+		for i := 0; i < int(math.Exp2(float64(numExitILinks))); i++ {
+			binaryStrRow := strings.Split(strconv.FormatInt(int64(i), 2), "")
+			binaryIntRow := make([]int, len(binaryStrRow))
+			for i, e := range binaryStrRow {
+				binaryIntRow[i], _ = strconv.Atoi(e)
+			}
+			for j, e := range binaryIntRow {
+				pth.ExitILinks[j].Inputs[0] = e
+				result := ProcessTest(test, nfo, supportingInfos, pth)
+				if result {
+					return true
+				}
 			}
 		}
+		return false
 	}
-	return false
 }
 
 func ProcessTest(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path) bool {

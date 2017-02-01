@@ -21,9 +21,9 @@ func TestTestMasterUse(t *testing.T) {
 	println("testing testMaster creation and use 1")
 	tm := New()
 
-	info1 := info.New("A")
-	info2 := info.New("B")
-	info3 := info.New("C")
+	info1 := info.New("A", "bla")
+	info2 := info.New("B", "bla")
+	info3 := info.New("C", "bal")
 
 	tm.Mem.SetRiver(info1, []int{1, 0, 0, 0, 1, 0, 0, 1})
 	tm.Mem.SetRiver(info2, []int{1, 1, 0, 0, 1, 1, 0, 1, 0})
@@ -42,9 +42,9 @@ func TestPather(t *testing.T) {
 	println("testing Path Module with case 1")
 	tm := New()
 
-	info1 := info.New("A")
-	info2 := info.New("B")
-	info3 := info.New("D")
+	info1 := info.New("A", "bla")
+	info2 := info.New("B", "bla")
+	info3 := info.New("D", "bla")
 
 	tm.Mem.SetRiver(info1, []int{1, 0, 0, 0, 1, 0, 0, 1})
 	tm.Mem.SetRiver(info2, []int{1, 1, 0, 0, 1, 1, 0, 1, 0})

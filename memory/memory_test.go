@@ -11,9 +11,9 @@ import (
 func TestPathPrint(t *testing.T) {
 	println("Path print test")
 	mem := New()
-	info1 := info.New("i1")
-	info2 := info.New("i2")
-	info3 := info.New("i3")
+	info1 := info.New("i1", "")
+	info2 := info.New("i2", "")
+	info3 := info.New("i3", "")
 
 	mem.SetRiver(info1, []int{1, 0, 0, 0, 1, 0, 0, 1})
 	mem.SetRiver(info2, []int{1, 1, 0, 0, 1, 1, 0, 1, 0})
@@ -31,9 +31,9 @@ func TestPathPrint(t *testing.T) {
 func TestPathRiverProcess(t *testing.T) {
 	println("River process test 1")
 	mem := New()
-	info1 := info.New("i1")
-	info2 := info.New("i2")
-	info3 := info.New("i3")
+	info1 := info.New("i1", "")
+	info2 := info.New("i2", "")
+	info3 := info.New("i3", "")
 
 	mem.SetRiver(info1, []int{1, 0, 0, 0, 1, 0, 0, 1})
 	mem.SetRiver(info2, []int{1, 1, 0, 0, 1, 1, 0, 1, 0})
@@ -74,9 +74,9 @@ func TestPathRiverProcess(t *testing.T) {
 func TestPathExitIVariation(t *testing.T) {
 	println("Cascade IVariation test 1")
 	mem := New()
-	info1 := info.New("i1")
-	info2 := info.New("i2")
-	info3 := info.New("i3")
+	info1 := info.New("i1", "")
+	info2 := info.New("i2", "")
+	info3 := info.New("i3", "")
 
 	mem.SetRiver(info1, []int{1, 0, 0, 0, 1, 0, 0, 1})
 	mem.SetRiver(info2, []int{1, 1, 0, 0, 1, 1, 0, 1, 1})
@@ -105,9 +105,9 @@ func TestPathExitIVariation(t *testing.T) {
 func TestMagicRiverInput(t *testing.T) {
 	println("Magic River test 1")
 	mem := New()
-	info1 := info.New("1")
-	info2 := info.New("2")
-	info3 := info.New("3")
+	info1 := info.New("i1", "")
+	info2 := info.New("i2", "")
+	info3 := info.New("i3", "")
 	mem.SetRiver(info1, []int{})
 	mem.SetRiver(info2, []int{})
 	mem.SetRiver(info3, []int{})
@@ -166,4 +166,6 @@ func TestMagicRiverInput(t *testing.T) {
 	newRow[info2] = 0
 	newRow[info3] = 1
 	mem.MagicRiverInput(newRow)
+
+	mem.PrintNumCascades()
 }
