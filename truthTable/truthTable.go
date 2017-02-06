@@ -132,18 +132,30 @@ func AttachLinks(source *Link, target *Link, sourceNum int) {
 }
 
 type TruthTable struct {
-	Outputs           []int //2 is equivalent to a dash
-	outputsStaging    []int
-	Size              int
-	LastProcessResult int
+	Outputs               []int //2 is equivalent to a dash
+	OutputsSnapshot       []int
+	OutputsSnapshot_lower []int
+	outputsStaging        []int
+	Size                  int
+	LastProcessResult     int
+	LastProcessLocation   int
 }
 
 func New(outputs []int) *TruthTable {
 	sze := size(outputs)
+	outputs2 := make([]int, 0)
+	outputs3 := make([]int, 0)
+	for _, e := range outputs {
+		outputs2 = append(outputs2, e)
+		outputs3 = append(outputs3, e)
+	}
 	var truthTable = TruthTable{
 		outputs,
+		outputs2,
+		outputs3,
 		outputs,
 		sze,
+		0,
 		0,
 	}
 	return &truthTable
@@ -153,10 +165,37 @@ func NewEntryTable() *TruthTable {
 	var truthTable = TruthTable{
 		[]int{0, 1},
 		[]int{0, 1},
+		[]int{0, 1},
+		[]int{0, 1},
 		1,
+		0,
 		0,
 	}
 	return &truthTable
+}
+
+func (t *TruthTable) TakeSnapshot() {
+	for i, e := range t.Outputs {
+		t.OutputsSnapshot[i] = e
+	}
+}
+
+func (t *TruthTable) RestoreSnapshot() {
+	for i, e := range t.OutputsSnapshot {
+		t.Outputs[i] = e
+	}
+}
+
+func (t *TruthTable) TakeSnapshot_lower() {
+	for i, e := range t.Outputs {
+		t.OutputsSnapshot_lower[i] = e
+	}
+}
+
+func (t *TruthTable) RestoreSnapshot_lower() {
+	for i, e := range t.OutputsSnapshot_lower {
+		t.Outputs[i] = e
+	}
 }
 
 func (t *TruthTable) Process(inputs []int) int {
@@ -180,6 +219,7 @@ func (t *TruthTable) Process(inputs []int) int {
 	}
 	location, _ := strconv.ParseInt(strings.Join(inputsText, ""), 2, 64)
 	t.LastProcessResult = t.Outputs[location]
+	t.LastProcessLocation = int(location)
 	return t.Outputs[location]
 }
 

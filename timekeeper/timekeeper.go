@@ -1,6 +1,8 @@
 package timeKeeper
 
 import (
+	"math"
+
 	"github.com/twoodhouse/leucopus/decisionMaker"
 	"github.com/twoodhouse/leucopus/ioManager"
 	"github.com/twoodhouse/leucopus/memory"
@@ -60,7 +62,7 @@ TODO list:
 	- Currently the algorithm is taking (possibly) too long to reach higher numbers of I nodes
 		- This could be corrected by saying a certain number of attempts must be made at a lower level, then the next is tried (recursive)
 	- Method for choosing supporting I nodes may need revised
-	- Investigate ExitINode issues (MAJOR)
+	- TODO next: make the value itself not available for checking? Or the whole value row? Or a special setting for doing current checks with other sources?
 	- Pushing buttons and checking them in different orders could cause problems between runs
 */
 func (tk *TimeKeeper) Begin() {
@@ -99,6 +101,10 @@ func (tk *TimeKeeper) Begin() {
 				// println(tk.Mem.InfoFitGoodnesses[tk.Tm.LastFocus])
 				if unweightedGoodness > tk.Mem.InfoFitGoodnesses[tk.Tm.LastFocus] || tk.Mem.InfoFitGoodnesses[tk.Tm.LastFocus] == float32(0) { //TODO: consider changing fitGoodness so that it works from 1 to 0, rather than 0 to 1
 					tk.Mem.Paths[tk.Tm.LastFocus] = pth
+					tk.Mem.RiverBalance[tk.Tm.LastFocus] = make([]int, int(math.Exp2(float64(len(pth.EntryLinks)))))
+					// for i, _ := range tk.Mem.RiverBalance[tk.Tm.LastFocus] {
+					// 	tk.Mem.RiverBalance[tk.Tm.LastFocus][i] = 0
+					// }
 					tk.Mem.InfoFitGoodnesses[tk.Tm.LastFocus] = unweightedGoodness
 					tk.Mem.SupportingInfos[tk.Tm.LastFocus] = tk.Tm.LastSupportingInfos
 					//TODO: LOW PRIORITY - add depth if appropriate later on
