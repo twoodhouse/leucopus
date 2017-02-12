@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/twoodhouse/leucopus/info"
 )
@@ -68,11 +69,11 @@ func (iom *IoManager) GetIncomingInfoAndMasterRowMap() map[*info.Info]int {
 }
 
 func (iom *IoManager) ProcessActionRowMap(actionRowMap map[*info.Info]int) {
-	for k, v := range actionRowMap {
-		//consider alternate implementation here
-		if v == 1 {
-			http.Get(k.Url)
+	for _, actionInfo := range iom.ActionInfos {
+		if actionRowMap[actionInfo] == 1 {
+			http.Get(actionInfo.Url)
 		}
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 

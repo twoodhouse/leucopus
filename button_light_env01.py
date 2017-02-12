@@ -8,6 +8,12 @@ lightIsOn = False
 def hello():
     return "This is a button and a lightbulb! Note that the button stays depressed once it is touched (unless it is reset)"
 
+@app.route("/resetall")
+def resetAll():
+    global lightIsOn
+    lightIsOn = False
+    return ""
+
 @app.route("/pushbutton")
 def pushButton():
     global lightIsOn

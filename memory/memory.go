@@ -175,29 +175,47 @@ func (m *Memory) GenerateCascadeTests(cascade map[*info.Info][]int, nfo *info.In
 func (m *Memory) ProcessPathAgainstCascades(focusInfo *info.Info, supportingInfos []*info.Info, pth *pather.Path) float32 {
 	totalCount := 0
 	correctCount := 0
+	// Process all cascades and use correctness to gauge fitgoodness
 	cascadesToProcess := m.Cascades[focusInfo]
-	for _, cascade := range cascadesToProcess {
-		pth.TakeSnapshot()
-		cascadeSuccess := pather.ProcessCascadeWithIVariation(cascade, focusInfo, supportingInfos, pth)
-		pth.RestoreSnapshot()
-		totalCount = totalCount + 1
-		if cascadeSuccess {
-			correctCount = correctCount + 1
-		}
-		_ = cascade
+	localRiverBalance := []int{}
+	for i := 0; i < len(pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.Outputs); i++ {
+		localRiverBalance = append(localRiverBalance, 0)
+	}
+	numCorrect := pather.ProcessAllCascadesTogether(cascadesToProcess, focusInfo, supportingInfos, pth, localRiverBalance)
+	correctCount = correctCount + numCorrect
+	totalCount = totalCount + len(cascadesToProcess)
+	// Update fitgoodness
+	var goodness float32
+	if len(cascadesToProcess) == 0 {
+		goodness = 1.0
+	} else {
+		goodness = float32(correctCount) / float32(totalCount)
 	}
 
-	// Update fitgoodness
-	var unweightedGoodness float32
-	if len(cascadesToProcess) == 0 {
-		unweightedGoodness = 1.0
-	} else {
-		unweightedGoodness = float32(correctCount) / float32(totalCount)
-	}
-	// oldFitGoodness := m.InfoFitGoodnesses[focusInfo]
-	// m.InfoFitGoodnesses[focusInfo] = (7 * oldFitGoodness / 8) + (goodness / 8)
-	// println(m.InfoFitGoodnesses[focusInfo])
-	return unweightedGoodness
+	return goodness
+
+	// for _, cascade := range cascadesToProcess {
+	// 	pth.TakeSnapshot()
+	// 	cascadeSuccess := pather.ProcessCascadeWithIVariation(cascade, focusInfo, supportingInfos, pth)
+	// 	pth.RestoreSnapshot()
+	// 	totalCount = totalCount + 1
+	// 	if cascadeSuccess {
+	// 		correctCount = correctCount + 1
+	// 	}
+	// 	_ = cascade
+	// }
+	//
+	// // Update fitgoodness
+	// var unweightedGoodness float32
+	// if len(cascadesToProcess) == 0 {
+	// 	unweightedGoodness = 1.0
+	// } else {
+	// 	unweightedGoodness = float32(correctCount) / float32(totalCount)
+	// }
+	// // oldFitGoodness := m.InfoFitGoodnesses[focusInfo]
+	// // m.InfoFitGoodnesses[focusInfo] = (7 * oldFitGoodness / 8) + (goodness / 8)
+	// // println(m.InfoFitGoodnesses[focusInfo])
+	// return unweightedGoodness
 }
 
 func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
@@ -211,8 +229,13 @@ func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
 			}
 		}
 	}
-	// First ProcessNextIteration(bla)
-	m.ProcessNextIteration(row)
+	// if this is the first time through, just process the row and add it to the river
+	for k, _ := range row {
+		if len(m.River[k]) == 0 {
+			m.ProcessNextIteration(row)
+			return
+		}
+	}
 	// Now ProcessRiver (for each river info) with river top
 	for focusInfo, _ := range m.River {
 		if _, ok := m.Paths[focusInfo]; !ok {
@@ -228,9 +251,9 @@ func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
 			for _, lnk := range pth.ExitILinks {
 				exitILinkInputs[lnk] = 1
 			}
-			result, index = pather.ProcessRiver2(m.GetRiverTop(), exitILinkInputs, focusInfo, supportingInfos, pth, true)
+			result, index = pather.ProcessRiver2(m.GetRiverTop(), row, exitILinkInputs, focusInfo, supportingInfos, pth, true)
 		} else {
-			result, index = pather.ProcessRiver2(m.GetRiverTop(), exitILinkInputs, focusInfo, supportingInfos, pth, false)
+			result, index = pather.ProcessRiver2(m.GetRiverTop(), row, exitILinkInputs, focusInfo, supportingInfos, pth, false)
 		}
 		// apply river balance (helps decide if there is a better explanation)
 		if result {
@@ -238,7 +261,7 @@ func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
 		} else {
 			m.RiverBalance[focusInfo][index] = m.RiverBalance[focusInfo][index] - 1
 		}
-		// check river balance to see if the explanation should be shifted. TODO: note that this will NOT switch around what cascade must be checked
+		// check river balance to see if the explanation should be shifted. Note that this will NOT switch around what cascade must be checked
 		if m.RiverBalance[focusInfo][index] < 0 {
 			valToChangeTo := 0
 			if pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.Outputs[index] == 0 {
@@ -247,6 +270,7 @@ func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
 			pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.Outputs[index] = valToChangeTo
 			m.RiverBalance[focusInfo][index] = m.RiverBalance[focusInfo][index] * -1
 		}
+
 		// Open cascade upon failure of process river
 		if !result {
 			// println("failure")
@@ -286,7 +310,8 @@ func (m *Memory) MagicRiverInput(row map[*info.Info]int) {
 		m.InfoFitGoodnesses[focusInfo] = goodness
 		// println(m.InfoFitGoodnesses[focusInfo])
 	}
-	// println()
+	m.ProcessNextIteration(row)
+
 }
 
 func (m *Memory) PrintRiver() {

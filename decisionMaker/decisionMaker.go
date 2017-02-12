@@ -26,6 +26,7 @@ func (dm *DecisionMaker) GetIncomingActionRowMap() map[*info.Info]int {
 	//initial implementation to allow for other work first: Random flailing. TODO: change this into rational decision making
 	for _, actionInfo := range dm.Iom.ActionInfos {
 		infoRowMap[actionInfo] = rand.Intn(2)
+		// infoRowMap[actionInfo] = 1
 	}
 	return infoRowMap
 }

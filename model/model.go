@@ -8,8 +8,9 @@ import (
 
 type Model struct {
 	//(info)(supportingInfos) -> Path... Normally, I would only have to gather paths by info, but varied supporting infos allows full modeling
-	Library     map[*info.Info]map[string]*pather.Path
-	FitGoodness map[*info.Info]map[string]*FitGoodness
+	Library         map[*info.Info]map[string]*pather.Path
+	FitGoodness     map[*info.Info]map[string]*FitGoodness
+	InfosFromString map[string][]*info.Info
 	/* problem right now:
 	the data captured in a cascade is not ALL information in the river, only certain infos.
 	I suppose there is no real harm in capturing the whole moment. It just might mean I have to delete
@@ -29,6 +30,7 @@ func New() *Model {
 	var entity = Model{
 		make(map[*info.Info]map[string]*pather.Path),
 		make(map[*info.Info]map[string]*FitGoodness),
+		make(map[string][]*info.Info),
 	}
 	return &entity
 }
@@ -61,6 +63,8 @@ func (mdl *Model) CheckInPath(focusInfo *info.Info, supportingInfos []*info.Info
 		fgSelection.UnweightedGoodness = unweightedGoodness
 		fgSelection.Attempts = fgSelection.Attempts + 1
 	}
+
+	mdl.InfosFromString[utility.GetUidFromInfos(supportingInfos)] = supportingInfos
 }
 
 func (mdl *Model) GetFitGoodness(focusInfo *info.Info, supportingInfos []*info.Info) *FitGoodness {
@@ -74,6 +78,22 @@ func (mdl *Model) GetFitGoodness(focusInfo *info.Info, supportingInfos []*info.I
 		mdl.FitGoodness[focusInfo][utility.GetUidFromInfos(supportingInfos)] = fg
 	}
 	return mdl.FitGoodness[focusInfo][utility.GetUidFromInfos(supportingInfos)]
+}
+
+func (mdl *Model) FindPathBetterThanGoodness(nfo *info.Info, unweightedGoodness float32) (*pather.Path, []*info.Info) {
+	var bestGoodness float32
+	bestGoodness = unweightedGoodness
+	var bestPath *pather.Path
+	var bestSupportingInfos []*info.Info
+	for supportingInfosString, fitGoodness := range mdl.FitGoodness[nfo] { //TODO: update this so it finds the simplest ones first
+		if fitGoodness.UnweightedGoodness > bestGoodness {
+			bestGoodness = fitGoodness.UnweightedGoodness
+			bestPath = mdl.Library[nfo][supportingInfosString]
+			sInfos := mdl.InfosFromString[supportingInfosString]
+			bestSupportingInfos = sInfos
+		}
+	}
+	return bestPath, bestSupportingInfos
 }
 
 func (mdl *Model) Print() {

@@ -241,7 +241,7 @@ func ProcessRiver(mostRecent map[*info.Info]int, exitILinkInputs map[*truthTable
 	return true
 }
 
-func ProcessRiver2(mostRecent map[*info.Info]int, exitILinkInputs map[*truthTable.Link]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path, setInitialExitILinks bool) (bool, int) {
+func ProcessRiver2(mostRecent map[*info.Info]int, newRow map[*info.Info]int, exitILinkInputs map[*truthTable.Link]int, nfo *info.Info, supportingInfos []*info.Info, pth *Path, setInitialExitILinks bool) (bool, int) {
 	if setInitialExitILinks {
 		for _, exitILink := range pth.ExitILinks {
 			exitILink.Inputs[0] = exitILinkInputs[exitILink]
@@ -261,7 +261,7 @@ func ProcessRiver2(mostRecent map[*info.Info]int, exitILinkInputs map[*truthTabl
 			pth.LinkAssociation[supportingInfo].Forward()
 		}
 	}
-	pth.AssumeBestOfR(mostRecent[nfo])
+	pth.AssumeBestOfR(newRow[nfo])
 
 	// println(nfo.Uid)
 	// println(pth.ExitLink.Output)
@@ -271,7 +271,7 @@ func ProcessRiver2(mostRecent map[*info.Info]int, exitILinkInputs map[*truthTabl
 	var index int
 	index = pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.LastProcessLocation
 
-	if pth.ExitLink.Output != mostRecent[nfo] {
+	if pth.ExitLink.Output != newRow[nfo] {
 		return false, index
 	}
 	return true, index
@@ -311,7 +311,6 @@ func ProcessAllCascadesTogether(cascades []map[*info.Info][]int, nfo *info.Info,
 	for i := 0; i < len(balance); i++ {
 		bestBalanceLocal = append(bestBalanceLocal, 0)
 	}
-	println()
 
 	for i := 0; i < int(math.Exp2(float64(totalNumStaticOutputs))); i++ { //next iterate over possible ExitINode initial values
 		balanceLocal := []int{}
@@ -354,9 +353,9 @@ func ProcessAllCascadesTogether(cascades []map[*info.Info][]int, nfo *info.Info,
 			}
 			success := ProcessCascadeWithIVariation(cascade, nfo, supportingInfos, pth)
 			if success {
-				if nfo.Uid == "i1" {
-					println("success")
-				}
+				// if nfo.Uid == "i1" {
+				// 	println("success")
+				// }
 				//if success, possibly the R table has been modified. Must keep track of which parameters changed in the river balance
 				for _, outputVal_old := range pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.OutputsSnapshot {
 					for i, outputVal := range pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.Outputs {
@@ -372,16 +371,16 @@ func ProcessAllCascadesTogether(cascades []map[*info.Info][]int, nfo *info.Info,
 				}
 				numCorrect = numCorrect + 1
 			} else {
-				if nfo.Uid == "i1" {
-					for k, v := range cascade { //for testing only
-						print(k.Uid)
-						print(": ")
-						for _, e := range v {
-							print(e)
-						}
-						println()
-					}
-				}
+				// if nfo.Uid == "i1" {
+				// 	for k, v := range cascade { //for testing only
+				// 		print(k.Uid)
+				// 		print(": ")
+				// 		for _, e := range v {
+				// 			print(e)
+				// 		}
+				// 		println()
+				// 	}
+				// }
 			}
 			pth.RestoreRTableSnapshot() // no need to keep modified R table between cascades. It will be recorded in the river balance
 		}
@@ -413,10 +412,10 @@ func ProcessAllCascadesTogether(cascades []map[*info.Info][]int, nfo *info.Info,
 	if len(cascades) > 0 {
 		for i, balanceOutput := range bestBalanceLocal {
 			if balanceOutput > 0 {
-				println("setting high")
+				// println("setting high")
 				pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.Outputs[i] = 1
 			} else if balanceOutput < 0 {
-				println("setting low")
+				// println("setting low")
 				pth.MiddleLinks[len(pth.MiddleLinks)-1].Table.Outputs[i] = 0
 			}
 		}
@@ -484,7 +483,7 @@ func ProcessTest(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*i
 
 func ProcessTest_Deep(test map[*info.Info][]int, nfo *info.Info, supportingInfos []*info.Info, sourceLinkAssociation map[*info.Info]*truthTable.Link, exitLink *truthTable.Link, exitILinks []*truthTable.Link, pth *Path) bool {
 
-	for i := 0; i < len(test[nfo]); i++ {
+	for i := 0; i < len(test[nfo])-1; i++ { // this line was modified to run 1 less test to remove self-explanation using the last variable.
 		for _, exitILink := range exitILinks {
 			exitILink.Process()
 			exitILink.Forward()
@@ -510,9 +509,9 @@ func ProcessTest_Deep(test map[*info.Info][]int, nfo *info.Info, supportingInfos
 				// }
 			}
 		}
-		pth.AssumeBestOfR(test[nfo][i])
+		pth.AssumeBestOfR(test[nfo][i+1]) //these plus 1 modifications were made here to help stop
 
-		if exitLink.Output != test[nfo][i] {
+		if exitLink.Output != test[nfo][i+1] {
 			return false
 		}
 	}
